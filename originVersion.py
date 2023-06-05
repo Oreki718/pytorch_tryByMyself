@@ -136,16 +136,15 @@ class MyNet(nn.Module):
 # verbose: Displaying logs or not 
 def train(net, trainLoader, epochs: int = 5, verbose=False):
     """Train the network on the training set."""
-    printed = False
+    # printed = False
     # Loss Function: CrossEntropyLoss
     # output a scalar if the parameter [reduction] is not "None"
     criterion = nn.CrossEntropyLoss()
 
-    # SGD, Adam are optimizers of different optimizing algorithms
+    # SGD, Adam are both optimizers of different optimizing algorithms
     optimizer = torch.optim.Adam(net.parameters())
 
-    # Let the model enter train mode
-    net.train()
+    net.train() # Let the model enter train mode
     for epoch in range(epochs):
         correct, total, epoch_loss = 0, 0, 0.0
         # batch by batch, each time BATCH_SIZE data will be loaded
@@ -153,6 +152,8 @@ def train(net, trainLoader, epochs: int = 5, verbose=False):
             # images: BATCH_SIZE * 3 * 32 * 32
             # labels: BATCH_SIZE
             images, labels = images.to(DEVICE), labels.to(DEVICE)
+
+            optimizer.zero_grad() # Set the gradients of all optimized torch.Tensors to zero
 
             # each 3 * 32 * 32 outputs a label list, the outputs is BATCH_SIZE * 10
             outputs = net(images)
@@ -162,7 +163,6 @@ def train(net, trainLoader, epochs: int = 5, verbose=False):
             loss = criterion(outputs, labels)
 
             # backpropagate the loss
-            optimizer.zero_grad() # Set the gradients of all optimized torch.Tensors to zero
             loss.backward()
             optimizer.step()
 
@@ -198,7 +198,7 @@ def test(net, testLoader):
 
 if __name__ == '__main__':
     trainLoader, valLoader, testLoader = load_dataset()
-    net = MyNet()
+    net = MyNet().to(DEVICE)
     train(net, trainLoader, 5, True)
     loss, accuracy = test(net, testLoader)
     print(f"Test loss: {loss}, accuracy {accuracy}")
