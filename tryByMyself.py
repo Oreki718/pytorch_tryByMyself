@@ -136,6 +136,7 @@ class MyNet(nn.Module):
 # verbose: Displaying logs or not 
 def train(net, trainLoader, epochs: int = 5, verbose=False):
     """Train the network on the training set."""
+    printed = False
     # Loss Function: CrossEntropyLoss
     # output a scalar if the parameter [reduction] is not "None"
     criterion = nn.CrossEntropyLoss()
@@ -146,13 +147,14 @@ def train(net, trainLoader, epochs: int = 5, verbose=False):
     # Let the model enter train mode
     net.train()
     for epoch in range(epochs):
+        correct, total, epoch_loss = 0, 0, 0.0
         # batch by batch, each time BATCH_SIZE data will be loaded
         for images, labels in trainLoader:
             # images: BATCH_SIZE * 3 * 32 * 32
-            # labels: BATCH_SIZE * 1
+            # labels: BATCH_SIZE
             images, labels = images.to(DEVICE), labels.to(DEVICE)
 
-            # each 3 * 32 * 32 outputs a label int, the output should be BATCH_SIZE * 1
+            # each 3 * 32 * 32 outputs a label list, the outputs is BATCH_SIZE * 10
             outputs = net(images)
 
             # calculated the loss with the defined loss function
@@ -160,19 +162,44 @@ def train(net, trainLoader, epochs: int = 5, verbose=False):
             loss = criterion(outputs, labels)
 
             # backpropagate the loss
+            optimizer.zero_grad() # Set the gradients of all optimized torch.Tensors to zero
             loss.backward()
             optimizer.step()
+
+            # Metrics
+            epoch_loss += loss
+            total += labels.size(0)
+            correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+        epoch_loss /= len(trainLoader.dataset)
+        epoch_acc = correct / total
         if verbose:
-            print(f"Epoch {epoch+1}: train loss , accuracy ")
+            print(f"Epoch {epoch+1}: train loss {epoch_loss}, accuracy {epoch_acc}")
 
 
-    # Set the gradients of all optimized torch.Tensors to zero
-    optimizer.zero_grad()
+def test(net, testLoader):
+    """Evaluate the network on the entire test set."""
+    criterion = torch.nn.CrossEntropyLoss()
+    correct, total, loss = 0, 0, 0.0
 
+    # Let the model enter evaluate mode
+    net.eval()
+    with torch.no_grad(): # no backward gradient calculation
+        for images, labels in testLoader:
+            images, labels = images.to(DEVICE), labels.to(DEVICE)
+            outputs = net(images)
+            loss += criterion(outputs, labels).item()
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    loss /= len(testLoader.dataset)
+    accuracy = correct / total
+    return loss, accuracy
 
 
 if __name__ == '__main__':
     trainLoader, valLoader, testLoader = load_dataset()
     net = MyNet()
     train(net, trainLoader, 5, True)
+    loss, accuracy = test(net, testLoader)
+    print(f"Test loss: {loss}, accuracy {accuracy}")
     
